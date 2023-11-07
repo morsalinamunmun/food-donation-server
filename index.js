@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 5000;
@@ -57,6 +57,24 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     })
+
+    // get specific data to id
+    app.get('/requestFood/:id', async(req, res)=>{
+      const id = req.params.id;
+      console.log(id)
+      const query= {_id: new ObjectId(id)};
+      const result = await requestCollection.findOne(query);
+      res.send(result);
+    })
+
+    //cancel
+    app.delete('/requestFood/:id', async(req, res)=>{
+      const id = req.params.id;
+      console.log(id)
+      const query = {_id: new ObjectId(id)}
+      const result = await requestCollection.deleteOne(query);
+      res.send(result);
+   })
 
 
     // Send a ping to confirm a successful connection
