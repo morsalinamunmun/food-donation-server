@@ -1,13 +1,19 @@
 const express = require('express');
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser')
 require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 5000;
 
 //middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173'],
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser())
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ddlqajr.mongodb.net/?retryWrites=true&w=majority`;
@@ -32,8 +38,44 @@ async function run() {
     //request food collection
     const requestCollection = client.db("donationDB").collection("request");
 
+    //auth api
+   app.post('/jwt',  async (req, res) => {
+    const user = req.body;
+    console.log('jwt', user)
+    const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+    res
+      .cookie('token', token, {
+        httpOnly: true,
+        secure: true,  //http://localhost:5174/signIn false
+        sameSite: 'none'
+      })
+      .send({ success: true })
+  })
+  
+  //user logout cookies token delete
+  app.post('/logout', async(req, res)=>{
+    const user = req.body;
+    console.log('logout delete cookie', user)
+    res.clearCookie('token', {maxAge: 0}).send({success: true});
+  })
+
+  //food
     app.get('/food', async(req, res)=>{
-        const cursor = foodCollection.find();
+
+      let queryObj = {}
+      let sortObj = {}
+      const foodName = req.query.foodName;
+      const sortField = req.query.sortField;
+      const sortOrder = req.query.sortOrder;
+      if(foodName){
+        queryObj.foodName = foodName
+      }
+
+      if(sortField && sortOrder){
+        sortObj[sortField] = sortOrder;
+      }
+
+        const cursor = foodCollection.find(queryObj).sort(sortObj);
         const result = await cursor.toArray();
         res.send(result);
     })
@@ -53,8 +95,13 @@ async function run() {
 
     //get request data
     app.get('/requestFood', async(req, res)=>{
-      const cursor = requestCollection.find();
-      const result = await cursor.toArray();
+      console.log(req.query.email)
+      console.log('cookies', req.cookies)
+      let query = {};
+      if(req.query?.email){
+        query = {email: req.query.email}
+      }
+      const result = await requestCollection.find(query).toArray();
       res.send(result);
     })
 
