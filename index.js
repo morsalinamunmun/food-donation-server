@@ -27,6 +27,27 @@ const client = new MongoClient(uri, {
   }
 });
 
+//middlewares
+const logger = (req, res, next)=>{
+  console.log('log:info', req.method, req.url);
+  next();
+}
+
+const verifyToken =(req, res, next)=>{
+  const token = req?.cookies?.token;
+  //console.log('token middleware', token);
+  if(!token){
+    return res.status(401).send({message: 'unauthorized access'})
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded)=>{
+    if(err){
+      return res.status(401).send({message: 'unauthorized access'})
+    }
+    req.user = decoded;
+    next();
+  })
+}
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -39,7 +60,7 @@ async function run() {
     const requestCollection = client.db("donationDB").collection("request");
 
     //auth api
-   app.post('/jwt',  async (req, res) => {
+   app.post('/jwt', logger,  async (req, res) => {
     const user = req.body;
     console.log('jwt', user)
     const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
@@ -94,9 +115,12 @@ async function run() {
     }) 
 
     //get request data
-    app.get('/requestFood', async(req, res)=>{
+    app.get('/requestFood', logger, verifyToken, async(req, res)=>{
       console.log(req.query.email)
-      console.log('cookies', req.cookies)
+      console.log('owner', req.user)
+      if(req.user.email !== req.query.email){
+        return res.status(403).send({message: 'forbidden access'})
+      }
       let query = {};
       if(req.query?.email){
         query = {email: req.query.email}
