@@ -9,7 +9,9 @@ const port = process.env.PORT || 5000;
 
 //middleware
 app.use(cors({
-  origin: ['http://localhost:5173'],
+  origin: [
+    'http://localhost:5173'
+  ],
   credentials: true
 }));
 app.use(express.json());
@@ -129,15 +131,20 @@ async function run() {
    //update
    app.put('/food/:id', async(req, res)=>{
     const id = req.params.id;
+    console.log("Id", id)
     const query = {_id: new ObjectId(id)}
-    const options = {upset: true};
-    const updateProductInfo = req.body;
-    const updateProduct = {
+    console.log("query", query);
+    const options = {upsert: true};
+    const updateFoodInfo = req.body;
+    const updateFood = {
       $set: {
-        image_url: updateProductInfo.image_url , name: updateProductInfo.name, product: updateProductInfo.product, rating: updateProductInfo.rating, description: updateProductInfo.description, price: updateProductInfo.price, type: updateProductInfo.type
+        image_url: updateFoodInfo.image_url , name: updateFoodInfo.name, foodName: updateFoodInfo.foodName, status: updateFoodInfo.status, notes: updateFoodInfo.notes, quantity: updateFoodInfo.quantity, location: updateFoodInfo.location, DImage_url: updateFoodInfo.DImage_url, date: updateFoodInfo.date,  D_email: updateFoodInfo.D_email
       }
     }
-    const result = await productCollection.updateOne(query, updateProduct, options);
+    console.log('update food', updateFood)
+
+    const result = await foodCollection.updateOne(query, updateFood, options);
+    console.log('result', result)
     res.send(result);
   })
 
@@ -179,6 +186,22 @@ async function run() {
       const result = await requestCollection.deleteOne(query);
       res.send(result);
    })
+
+
+   //update status
+   app.put('/updateRequestStatus/:id', async (req, res) => {
+  const id = req.params.id;
+  const updateStatus = req.body.status;
+
+  // Update the status field in the database
+  const result = await foodRequestCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { status: updateStatus } }
+  );
+
+  res.send(result);
+});
+
 
 
     // Send a ping to confirm a successful connection
